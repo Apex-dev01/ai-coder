@@ -1,9 +1,10 @@
 import os
 import subprocess
 import re
+import requests
 from flask import Flask, request, jsonify
 from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceHub
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 from github import Github
@@ -15,11 +16,15 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
+# Use a specific, free model from the Hugging Face Hub
+llm = HuggingFaceHub(
+    repo_id="HuggingFaceH4/zephyr-7b-beta",  # A good, general-purpose model
+    huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
+)
 
-# Simple mechanism to track API usage
+# Set a much lower token limit for Hugging Face's free tier
 API_TOKENS_USED = 0
-MAX_API_TOKENS = 200000  # Example limit: 200,000 tokens
+MAX_API_TOKENS = 50000  # A safe, conservative limit for the free tier
 
 login_attempts = {}
 COOLDOWN_PERIOD_MINUTES = 5
@@ -234,7 +239,6 @@ def agent_endpoint():
             return jsonify({"error": "Prompt is required."}), 400
 
         if mode == "agent":
-            # The agent mode is for complex tasks that require tool use
             if check_api_limit():
                 return jsonify({"response": "I'm sorry, I have reached my API usage limit. I cannot create a new project at this time. Please try again later."})
                 
@@ -252,7 +256,6 @@ def agent_endpoint():
             return jsonify({"response": response.get("output")})
 
         elif mode == "chat":
-            # The chat mode is for simple conversations and Q&A
             chat_response = llm.invoke(prompt)
             return jsonify({"response": chat_response.content})
 

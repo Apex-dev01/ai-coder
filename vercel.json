@@ -12,7 +12,7 @@
       "dest": "/api/agent.py"
     },
     {
-      "src": "/(.*)",
+      "src": "/",
       "dest": "index.html"
     }
   ]
